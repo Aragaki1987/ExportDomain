@@ -14,6 +14,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.TimeZone;
 
 /**
  * Created by nguye on 4/15/2017.
@@ -26,15 +27,19 @@ public class Main {
         String filterFile = args[0];
         String resultLocation = args[1];
         Properties properties = loadProperties();
+        int startHour = Integer.valueOf(properties.getProperty("start.hour"));
+        int startMin = Integer.valueOf(properties.getProperty("start.minute"));
 
+        String cronString = "0 " + startMin + " " + startHour + " * * ?";
 
         JobDetail job = JobBuilder.newJob(ExportService.class).withIdentity("exportJob", "groupExport").build();
 
         Trigger trigger = TriggerBuilder
                 .newTrigger()
                 .withIdentity("exportJob", "groupExport")
+                .startNow()
                 .withSchedule(
-                        CronScheduleBuilder.cronSchedule("0/5 * * * * ?"))
+                        CronScheduleBuilder.cronSchedule(cronString).inTimeZone(TimeZone.getTimeZone("UTC")))
                 .build();
 
 

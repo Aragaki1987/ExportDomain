@@ -2,7 +2,9 @@ package com.san.service;
 
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.CookieManager;
+import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebResponse;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
@@ -17,17 +19,21 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.SchedulerException;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -88,9 +94,9 @@ public class ExportService implements Job {
                     System.out.println("LOGIN....");
                     webClient = login();
                     System.out.println("APPLY FILTER....");
-                    HtmlPage page = filter(webClient);
+                    String url = createFilter();
                     System.out.println("EXPORT DATA....");
-                    Set<String> domainList = exportDataFromPageResult(page);
+                    List<String> domainList = exportDataFromPageResultByLink(webClient, url);
                     System.out.println("THERE ARE " + domainList.size() + " DOMAINS");
                     if (domainList.size() > 0) {
                         System.out.println("START STORE DOMAIN LIST IN THE FILE");
@@ -99,6 +105,7 @@ public class ExportService implements Job {
                         sleep = true;
                     } else {
                         /*If there is no new domain, sleep for 1 minute and repeat*/
+                        System.out.println("SLEEP FOR 1 MINUTE...");
                         sleep(60 * 1000);
                     }
                 } catch (IOException e) {
@@ -106,6 +113,98 @@ public class ExportService implements Job {
                 }
             }
         }
+    }
+
+    private String createFilter() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("https://member.expireddomains.net/export/expiredcom201704/?export=textfile&flast12=1");
+        if(!filterProps.getProperty("minExBackLink").isEmpty()) {
+            builder.append("&fmseoextbl=" + filterProps.getProperty("minExBackLink"));
+        }
+        if(!filterProps.getProperty("maxExBackLink").isEmpty()) {
+            builder.append("&fmseoextblmax=" + filterProps.getProperty("maxExBackLink"));
+        }
+        if(!filterProps.getProperty("minMajesticRefDomain").isEmpty()) {
+            builder.append("&fmseorefdomains=" + filterProps.getProperty("minMajesticRefDomain"));
+        }
+        if(!filterProps.getProperty("minMajesticRefIP").isEmpty()) {
+            builder.append("&fmseorefips=" + filterProps.getProperty("minMajesticRefIP"));
+        }
+        if(!filterProps.getProperty("minMajesticClassC").isEmpty()) {
+            builder.append("&fmseorefsubnets=" + filterProps.getProperty("minMajesticClassC"));
+        }
+        if(!filterProps.getProperty("minMajesticCitationFlow").isEmpty()) {
+            builder.append("&fmseocf=" + filterProps.getProperty("minMajesticCitationFlow"));
+        }
+        if(!filterProps.getProperty("minMajesticTrustFlow").isEmpty()) {
+            builder.append("&fmseotf=" + filterProps.getProperty("minMajesticTrustFlow"));
+        }
+        if(!filterProps.getProperty("minMajesticTrustRatio").isEmpty()) {
+            builder.append("&fmseotr=" + filterProps.getProperty("minMajesticTrustRatio"));
+        }
+
+        return builder.toString();
+    }
+
+    //https://member.expireddomains.net/export/expiredcom201704/?export=textfile&flast12=1&flimit=200&fmseocf=10&fmseotf=10&fmseoextbl=10&fmseoextblmax=10000&fmseorefdomains=10&fmseorefips=10&fmseorefsubnets=10&fmseotr=10
+    private List<String> exportDataFromPageResultByLink(WebClient webClient, String url) {
+        List<String> result = new ArrayList<String>();
+        try {
+            System.out.println("Download file from URL : " + url);
+            Page page = webClient.getPage(url);
+            WebResponse response = page.getWebResponse();
+
+            InputStream contentAsStream = response.getContentAsStream();
+
+            result = getStringFromInputStream(contentAsStream);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    // convert InputStream to String list
+    private List<String> getStringFromInputStream(InputStream is) {
+        List<String> domainList = new ArrayList<String>();
+        BufferedReader br = null;
+
+        String line;
+        try {
+
+            br = new BufferedReader(new InputStreamReader(is));
+            while ((line = br.readLine()) != null) {
+                if(line.length()>2) { //make sure it's a domain
+                    domainList.add(line);
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return domainList;
+
+    }
+
+    public Set<String> exportDataFromPageResult(HtmlPage page) throws IOException {
+        HtmlAnchor downloadLink = page.getAnchorByHref("/export/expiredcom/?export=textfile");
+        System.out.println(downloadLink);
+
+        String is = downloadLink.click().getWebResponse().getContentAsString();
+
+        String[] result = is.split("\n");
+
+        return new HashSet<String>(Arrays.asList(result));
     }
 
     private void loadFilter(String sourceFilter) {
@@ -195,17 +294,6 @@ public class ExportService implements Job {
         return button.click();
     }
 
-    public Set<String> exportDataFromPageResult(HtmlPage page) throws IOException {
-        HtmlAnchor downloadLink = page.getAnchorByHref("/export/expiredcom/?export=textfile");
-        System.out.println(downloadLink);
-
-        String is = downloadLink.click().getWebResponse().getContentAsString();
-
-        String[] result = is.split("\n");
-
-        return new HashSet<String>(Arrays.asList(result));
-    }
-
     private boolean validateTime(int hour, int min) {
         int startHour;
         int startMin;
@@ -221,13 +309,6 @@ public class ExportService implements Job {
             return false;
         }
 
-        System.out.println("hour : " + hour);
-        System.out.println("min : " + min);
-        System.out.println("startHour : " + startHour);
-        System.out.println("startMin : " + startMin);
-        System.out.println("endHour : " + endHour);
-        System.out.println("endMin : " + endMin);
-
         return hour >= startHour && hour <= endHour;
     }
 
@@ -240,7 +321,7 @@ public class ExportService implements Job {
     }
 
 
-    private void storeDomainList(Set<String> domainList) {
+    private void storeDomainList(List<String> domainList) {
         File file = new File(resultFile);
         PrintWriter out = null;
         try {

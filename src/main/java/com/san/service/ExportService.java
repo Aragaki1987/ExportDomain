@@ -228,7 +228,7 @@ public class ExportService implements Job {
         System.out.println("endHour : " + endHour);
         System.out.println("endMin : " + endMin);
 
-        return hour >= startHour && hour <= endHour && min >= startMin && min <= endMin;
+        return hour >= startHour && hour <= endHour;
     }
 
     private void sleep(int number) {

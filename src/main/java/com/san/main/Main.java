@@ -23,6 +23,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         if(args.length != 2) {
             System.out.println("Application need 2 parameters to execute. Filter source file location and result file location. ");
+            return;
         }
         String filterFile = args[0];
         String resultLocation = args[1];
@@ -31,6 +32,7 @@ public class Main {
         int startMin = Integer.valueOf(properties.getProperty("start.minute"));
 
         String cronString = "0 " + startMin + " " + startHour + " * * ?";
+        System.out.println(cronString);
 
         JobDetail job = JobBuilder.newJob(ExportService.class).withIdentity("exportJob", "groupExport").build();
 

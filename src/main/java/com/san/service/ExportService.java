@@ -15,6 +15,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.quartz.SchedulerException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,27 +46,37 @@ public class ExportService implements Job {
 
 
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        this.sourceFilter = (String) jobExecutionContext.get("filterFile");
-        String resultLocation = (String)jobExecutionContext.get("resultLocation");
 
-        properties = (Properties) jobExecutionContext.get("properties");
+        System.out.println("Loading properties");
+        try {
+            this.sourceFilter = jobExecutionContext.getScheduler().getContext().getString("filterFile");
+            System.out.println("Filter file : " + this.sourceFilter);
+            String resultLocation = jobExecutionContext.getScheduler().getContext().getString("resultLocation");
+            System.out.println("Result Location : " + resultLocation);
+            properties = (Properties) jobExecutionContext.getScheduler().getContext().get("properties");
 
-        Calendar now = Calendar.getInstance();
-        this.resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
-                + "_" + now.get(Calendar.MONTH)
-                + "_" + now.get(Calendar.YEAR)
-                + ".txt";
-        loadFilter(this.sourceFilter);
+            Calendar now = Calendar.getInstance();
+            this.resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
+                    + "_" + now.get(Calendar.MONTH)
+                    + "_" + now.get(Calendar.YEAR)
+                    + ".txt";
+            System.out.println("FileName : " + this.resultFile);
+            System.out.println("Load Filter");
+            loadFilter(this.sourceFilter);
 
-        run();
+            System.out.println("Start cron job....");
+            run();
+        } catch (SchedulerException e) {
+            e.printStackTrace();
+        }
     }
 
     public void run() {
         WebClient webClient;
         boolean sleep = false;
         ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
-        int hour = utc.getHour() + 1;
-        int min = utc.getMinute() + 1;
+        int hour = utc.getHour();
+        int min = utc.getMinute();
 
         while (!sleep) {
 
@@ -209,6 +220,13 @@ public class ExportService implements Job {
             System.out.println("ERROR when parsing start time and end time...");
             return false;
         }
+
+        System.out.println("hour : " + hour);
+        System.out.println("min : " + min);
+        System.out.println("startHour : " + startHour);
+        System.out.println("startMin : " + startMin);
+        System.out.println("endHour : " + endHour);
+        System.out.println("endMin : " + endMin);
 
         return hour >= startHour && hour <= endHour && min >= startMin && min <= endMin;
     }

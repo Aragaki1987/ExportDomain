@@ -1,0 +1,8 @@
+minExBackLink=10
+maxExBackLink=10000
+minMajesticRefDomain=10
+minMajesticRefIP=10
+minMajesticClassC=10
+minMajesticCitationFlow=10
+minMajesticTrustFlow=10
+minMajesticTrustRatio=10

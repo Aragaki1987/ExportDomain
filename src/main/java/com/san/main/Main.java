@@ -20,7 +20,7 @@ public class Main {
         }
         String filterFile = args[0];
         String resultFile = args[1];*/
-       /* ExportService exportService = new ExportService("F:\\Upwork\\epxort_domain\\export-domain\\src\\main\\resources\\ExpiredDomainConfig.txt", "F:\\Upwork\\epxort_domain");
-        exportService.run();*/
+        ExportService exportService = new ExportService("D:\\UW\\ExportDomain\\ExportDomain\\src\\main\\resources\\ExpiredDomainConfig.txt", "D:\\UW\\ExportDomain");
+        exportService.run();
     }
 }

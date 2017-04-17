@@ -12,6 +12,9 @@ import com.gargoylesoftware.htmlunit.html.HtmlNumberInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
 import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,7 +33,7 @@ import java.util.Set;
 /**
  * Created by nguye on 4/15/2017.
  */
-public class ExportService implements Runnable {
+public class ExportService implements Job {
     private Properties filterProps;
     private Properties properties;
     private String sourceFilter;
@@ -51,7 +54,7 @@ public class ExportService implements Runnable {
         properties = new Properties();
         InputStream is = null;
         try {
-            is = new FileInputStream("F:\\Upwork\\epxort_domain\\export-domain\\export.properties");
+            is = new FileInputStream("D:\\UW\\ExportDomain\\ExportDomain\\export.properties");
             properties.load(is);
         } catch (FileNotFoundException e) {
             System.out.println("ERROR : Properties config file is not found");
@@ -108,8 +111,8 @@ public class ExportService implements Runnable {
         HtmlTextInput login = (HtmlTextInput) page.getElementById("inputLogin");
         HtmlPasswordInput password = (HtmlPasswordInput) page.getElementById("inputPassword");
 
-        login.setText("aragaki");
-        password.setText("meokeugaugau");
+        login.setText(properties.getProperty("username"));
+        password.setText(properties.getProperty("password"));
 
         button.click();
 
@@ -168,7 +171,6 @@ public class ExportService implements Runnable {
     public void run() {
         WebClient webClient;
         boolean sleep = true;
-        while (true) {
             ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
             int hour = utc.getHour() + 1;
             int min = utc.getMinute() + 1;
@@ -178,19 +180,19 @@ public class ExportService implements Runnable {
             int endHour = Integer.valueOf(properties.getProperty("end.hour"));
             int endMin = Integer.valueOf(properties.getProperty("end.minute"));
 
-            /*if current hour is in range, wake up*/
-            if (hour >= startHour && hour < endHour
-                   && min >= startMin && min <= endMin ) {
-                sleep = false;
-            }
-
-            while (!sleep) {
+            //while (!sleep) {
                 try {
+                    System.out.println("LOGIN....");
                     webClient = login();
+                    System.out.println("APPLY FILTER....");
                     HtmlPage page = filter(webClient);
+                    System.out.println("EXPORT DATA....");
                     Set<String> domainList = exportDataFromPageResult(page);
+                    System.out.println("THERE ARE " + domainList.size() + " DOMAINS");
                     if (domainList.size() > 0) {
+                        System.out.println("START STORE DOMAIN LIST IN THE FILE");
                         storeDomainList(domainList);
+                        System.out.println("FINISHED");
                         /**/
                         sleep = false;
                     } else {
@@ -198,13 +200,9 @@ public class ExportService implements Runnable {
                         sleep(60 * 1000);
                     }
                 } catch (IOException e) {
-                    System.out.println("ERROR");
+                    e.printStackTrace();
                 }
-            }
-
-            /*Sleep until next run*/
-            sleep((endHour - startHour) * 60 * 60 * 1000);
-        }
+           // }
     }
 
     private void sleep(int number) {
@@ -239,8 +237,10 @@ public class ExportService implements Runnable {
             e.printStackTrace();
         } finally {
             out.close();
-            ;
         }
+    }
+
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
 
     }
 }

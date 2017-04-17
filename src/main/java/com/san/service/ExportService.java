@@ -39,32 +39,59 @@ public class ExportService implements Job {
     private String sourceFilter;
     private String resultFile;
 
-    public ExportService(String sourceFilter, String resultLocation) {
+    public ExportService() {
+
+    }
+
+
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        this.sourceFilter = (String) jobExecutionContext.get("filterFile");
+        String resultLocation = (String)jobExecutionContext.get("resultLocation");
+
+        properties = (Properties) jobExecutionContext.get("properties");
+
         Calendar now = Calendar.getInstance();
-        this.sourceFilter = sourceFilter;
         this.resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
                 + "_" + now.get(Calendar.MONTH)
                 + "_" + now.get(Calendar.YEAR)
                 + ".txt";
         loadFilter(this.sourceFilter);
-        loadProperties();
+
+        run();
     }
 
-    private void loadProperties() {
-        properties = new Properties();
-        InputStream is = null;
-        try {
-            is = new FileInputStream("D:\\UW\\ExportDomain\\ExportDomain\\export.properties");
-            properties.load(is);
-        } catch (FileNotFoundException e) {
-            System.out.println("ERROR : Properties config file is not found");
-        } catch (IOException e) {
-            System.out.println("ERROR : Cannot load properties from file");
-        } finally {
-            if (is != null) {
+    public void run() {
+        WebClient webClient;
+        boolean sleep = false;
+        ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
+        int hour = utc.getHour() + 1;
+        int min = utc.getMinute() + 1;
+
+        while (!sleep) {
+
+            if (!validateTime(hour, min)) {
+                System.out.println("CURRENT TIME IS OUT OF RANGE, WAIT FOR NEXT TURN");
+                sleep = true;
+            } else {
                 try {
-                    is.close();
+                    System.out.println("LOGIN....");
+                    webClient = login();
+                    System.out.println("APPLY FILTER....");
+                    HtmlPage page = filter(webClient);
+                    System.out.println("EXPORT DATA....");
+                    Set<String> domainList = exportDataFromPageResult(page);
+                    System.out.println("THERE ARE " + domainList.size() + " DOMAINS");
+                    if (domainList.size() > 0) {
+                        System.out.println("START STORE DOMAIN LIST IN THE FILE");
+                        storeDomainList(domainList);
+                        System.out.println("FINISHED");
+                        sleep = true;
+                    } else {
+                        /*If there is no new domain, sleep for 1 minute and repeat*/
+                        sleep(60 * 1000);
+                    }
                 } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
@@ -168,41 +195,22 @@ public class ExportService implements Job {
         return new HashSet<String>(Arrays.asList(result));
     }
 
-    public void run() {
-        WebClient webClient;
-        boolean sleep = true;
-            ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
-            int hour = utc.getHour() + 1;
-            int min = utc.getMinute() + 1;
+    private boolean validateTime(int hour, int min) {
+        int startHour;
+        int startMin;
+        int endHour;
+        int endMin;
+        try {
+            startHour = Integer.valueOf(properties.getProperty("start.hour"));
+            startMin = Integer.valueOf(properties.getProperty("start.minute"));
+            endHour = Integer.valueOf(properties.getProperty("end.hour"));
+            endMin = Integer.valueOf(properties.getProperty("end.minute"));
+        } catch (Exception ex) {
+            System.out.println("ERROR when parsing start time and end time...");
+            return false;
+        }
 
-            int startHour = Integer.valueOf(properties.getProperty("start.hour"));
-            int startMin = Integer.valueOf(properties.getProperty("start.minute"));
-            int endHour = Integer.valueOf(properties.getProperty("end.hour"));
-            int endMin = Integer.valueOf(properties.getProperty("end.minute"));
-
-            //while (!sleep) {
-                try {
-                    System.out.println("LOGIN....");
-                    webClient = login();
-                    System.out.println("APPLY FILTER....");
-                    HtmlPage page = filter(webClient);
-                    System.out.println("EXPORT DATA....");
-                    Set<String> domainList = exportDataFromPageResult(page);
-                    System.out.println("THERE ARE " + domainList.size() + " DOMAINS");
-                    if (domainList.size() > 0) {
-                        System.out.println("START STORE DOMAIN LIST IN THE FILE");
-                        storeDomainList(domainList);
-                        System.out.println("FINISHED");
-                        /**/
-                        sleep = false;
-                    } else {
-                        /*If there is no new domain, sleep for 1 minute and repeat*/
-                        sleep(60 * 1000);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-           // }
+        return hour >= startHour && hour <= endHour && min >= startMin && min <= endMin;
     }
 
     private void sleep(int number) {
@@ -240,7 +248,35 @@ public class ExportService implements Job {
         }
     }
 
-    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+    public Properties getFilterProps() {
+        return filterProps;
+    }
 
+    public void setFilterProps(Properties filterProps) {
+        this.filterProps = filterProps;
+    }
+
+    public Properties getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Properties properties) {
+        this.properties = properties;
+    }
+
+    public String getSourceFilter() {
+        return sourceFilter;
+    }
+
+    public void setSourceFilter(String sourceFilter) {
+        this.sourceFilter = sourceFilter;
+    }
+
+    public String getResultFile() {
+        return resultFile;
+    }
+
+    public void setResultFile(String resultFile) {
+        this.resultFile = resultFile;
     }
 }

@@ -32,6 +32,7 @@
 
 
     <build>
+        <finalName>export-domain</finalName>
         <plugins>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>

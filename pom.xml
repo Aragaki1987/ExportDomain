@@ -16,6 +16,5 @@
             <artifactId>htmlunit</artifactId>
             <version>2.25</version>
         </dependency>
-
     </dependencies>
 </project>

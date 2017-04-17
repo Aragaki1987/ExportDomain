@@ -12,28 +12,59 @@ import com.gargoylesoftware.htmlunit.html.HtmlNumberInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
 import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
-import com.gargoylesoftware.htmlunit.util.Cookie;
 
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.io.PrintWriter;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
 /**
  * Created by nguye on 4/15/2017.
  */
-public class ExportService {
-    Properties filterProps;
+public class ExportService implements Runnable {
+    private Properties filterProps;
+    private Properties properties;
+    private String sourceFilter;
+    private String resultFile;
 
-    public ExportService(String sourceFilter, String resultFile) {
-        loadFilter(sourceFilter);
+    public ExportService(String sourceFilter, String resultLocation) {
+        Calendar now = Calendar.getInstance();
+        this.sourceFilter = sourceFilter;
+        this.resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
+                + "_" + now.get(Calendar.MONTH)
+                + "_" + now.get(Calendar.YEAR)
+                + ".txt";
+        loadFilter(this.sourceFilter);
+        loadProperties();
+    }
+
+    private void loadProperties() {
+        properties = new Properties();
+        InputStream is = null;
+        try {
+            is = new FileInputStream("F:\\Upwork\\epxort_domain\\export-domain\\export.properties");
+            properties.load(is);
+        } catch (FileNotFoundException e) {
+            System.out.println("ERROR : Properties config file is not found");
+        } catch (IOException e) {
+            System.out.println("ERROR : Cannot load properties from file");
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                }
+            }
+        }
     }
 
     private void loadFilter(String sourceFilter) {
@@ -57,7 +88,7 @@ public class ExportService {
     }
 
     public WebClient login() throws IOException {
-        WebClient webClient = new WebClient(BrowserVersion.EDGE);
+        WebClient webClient = new WebClient(BrowserVersion.INTERNET_EXPLORER);
         webClient.getOptions().setThrowExceptionOnScriptError(false);
         webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         CookieManager cookieMan = new CookieManager();
@@ -121,17 +152,95 @@ public class ExportService {
         HtmlInput button = filterForm.getInputByValue("Apply Filter");
 
         return button.click();
-        //return webClient;
     }
 
-    public void exportDataFromPageResult(HtmlPage page) throws IOException {
+    public Set<String> exportDataFromPageResult(HtmlPage page) throws IOException {
         HtmlAnchor downloadLink = page.getAnchorByHref("/export/expiredcom/?export=textfile");
         System.out.println(downloadLink);
 
         String is = downloadLink.click().getWebResponse().getContentAsString();
 
-        System.out.println(is);
+        String[] result = is.split("\n");
+
+        return new HashSet<String>(Arrays.asList(result));
+    }
+
+    public void run() {
+        WebClient webClient;
+        boolean sleep = true;
+        while (true) {
+            ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
+            int hour = utc.getHour() + 1;
+            int min = utc.getMinute() + 1;
+
+            int startHour = Integer.valueOf(properties.getProperty("start.hour"));
+            int startMin = Integer.valueOf(properties.getProperty("start.minute"));
+            int endHour = Integer.valueOf(properties.getProperty("end.hour"));
+            int endMin = Integer.valueOf(properties.getProperty("end.minute"));
+
+            /*if current hour is in range, wake up*/
+            if (hour >= startHour && hour < endHour
+                   && min >= startMin && min <= endMin ) {
+                sleep = false;
+            }
+
+            while (!sleep) {
+                try {
+                    webClient = login();
+                    HtmlPage page = filter(webClient);
+                    Set<String> domainList = exportDataFromPageResult(page);
+                    if (domainList.size() > 0) {
+                        storeDomainList(domainList);
+                        /**/
+                        sleep = false;
+                    } else {
+                        /*If there is no new domain, sleep for 1 minute and repeat*/
+                        sleep(60 * 1000);
+                    }
+                } catch (IOException e) {
+                    System.out.println("ERROR");
+                }
+            }
+
+            /*Sleep until next run*/
+            sleep((endHour - startHour) * 60 * 60 * 1000);
+        }
+    }
+
+    private void sleep(int number) {
+        try {
+            Thread.sleep(number);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 
+    private void storeDomainList(Set<String> domainList) {
+        File file = new File(resultFile);
+        PrintWriter out = null;
+        try {
+            if (file.exists()) {
+                System.out.println("ERROR: File exist.");
+            } else {
+                file.createNewFile();
+                out = new PrintWriter(new File(resultFile));
+                int index = 0;
+                out.println("=====================================0=====================================");
+                for (String line : domainList) {
+                    out.print(line);
+                    index++;
+                    if (index % 400 == 0) {
+                        out.println("=====================================" + index + "=====================================");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            out.close();
+            ;
+        }
+
+    }
 }

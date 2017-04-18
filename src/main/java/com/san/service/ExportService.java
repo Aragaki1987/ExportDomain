@@ -44,7 +44,7 @@ public class ExportService implements Job {
     private Properties filterProps;
     private Properties properties;
     private String sourceFilter;
-    private String resultFile;
+    private String resultLocation;
 
     public ExportService() {
 
@@ -61,12 +61,6 @@ public class ExportService implements Job {
             System.out.println("Result Location : " + resultLocation);
             properties = (Properties) jobExecutionContext.getScheduler().getContext().get("properties");
 
-            Calendar now = Calendar.getInstance();
-            this.resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
-                    + "_" + now.get(Calendar.MONTH)
-                    + "_" + now.get(Calendar.YEAR)
-                    + ".txt";
-            System.out.println("FileName : " + this.resultFile);
             System.out.println("Load Filter");
             loadFilter(this.sourceFilter);
 
@@ -322,6 +316,13 @@ public class ExportService implements Job {
 
 
     private void storeDomainList(List<String> domainList) {
+        Calendar now = Calendar.getInstance();
+        String resultFile = resultLocation + "/deleted-com-domains-" + now.get(Calendar.DATE)
+                + "_" + now.get(Calendar.MONTH)
+                + "_" + now.get(Calendar.YEAR)
+                + ".txt";
+        System.out.println("FileName : " + resultFile);
+
         File file = new File(resultFile);
         PrintWriter out = null;
         try {
@@ -371,11 +372,11 @@ public class ExportService implements Job {
         this.sourceFilter = sourceFilter;
     }
 
-    public String getResultFile() {
-        return resultFile;
+    public String getResultLocation() {
+        return resultLocation;
     }
 
-    public void setResultFile(String resultFile) {
-        this.resultFile = resultFile;
+    public void setResultLocation(String resultLocation) {
+        this.resultLocation = resultLocation;
     }
 }

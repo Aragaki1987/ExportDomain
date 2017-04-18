@@ -95,7 +95,7 @@ public class ExportService implements Job {
                     if (domainList.size() > 0) {
                         System.out.println("START STORE DOMAIN LIST IN THE FILE");
                         storeDomainList(domainList);
-                        System.out.println("FINISHED");
+                        System.out.println("FINISHED - SLEEP until next run");
                         sleep = true;
                     } else {
                         /*If there is no new domain, sleep for 1 minute and repeat*/
@@ -111,29 +111,37 @@ public class ExportService implements Job {
 
     private String createFilter() {
         StringBuilder builder = new StringBuilder();
-        builder.append("https://member.expireddomains.net/export/expiredcom201704/?export=textfile&flast12=1");
+        builder.append("https://member.expireddomains.net/export/expiredcom/?export=textfile&flast12=1");
         if(!filterProps.getProperty("minExBackLink").isEmpty()) {
+            System.out.println("minExBackLink : " + filterProps.getProperty("minExBackLink"));
             builder.append("&fmseoextbl=" + filterProps.getProperty("minExBackLink"));
         }
         if(!filterProps.getProperty("maxExBackLink").isEmpty()) {
+            System.out.println("maxExBackLink : " + filterProps.getProperty("maxExBackLink"));
             builder.append("&fmseoextblmax=" + filterProps.getProperty("maxExBackLink"));
         }
         if(!filterProps.getProperty("minMajesticRefDomain").isEmpty()) {
+            System.out.println("minMajesticRefDomain : " + filterProps.getProperty("minMajesticRefDomain"));
             builder.append("&fmseorefdomains=" + filterProps.getProperty("minMajesticRefDomain"));
         }
         if(!filterProps.getProperty("minMajesticRefIP").isEmpty()) {
+            System.out.println("minMajesticRefIP : " + filterProps.getProperty("minMajesticRefIP"));
             builder.append("&fmseorefips=" + filterProps.getProperty("minMajesticRefIP"));
         }
         if(!filterProps.getProperty("minMajesticClassC").isEmpty()) {
+            System.out.println("minMajesticClassC : " + filterProps.getProperty("minMajesticClassC"));
             builder.append("&fmseorefsubnets=" + filterProps.getProperty("minMajesticClassC"));
         }
         if(!filterProps.getProperty("minMajesticCitationFlow").isEmpty()) {
+            System.out.println("minMajesticCitationFlow : " + filterProps.getProperty("minMajesticCitationFlow"));
             builder.append("&fmseocf=" + filterProps.getProperty("minMajesticCitationFlow"));
         }
         if(!filterProps.getProperty("minMajesticTrustFlow").isEmpty()) {
+            System.out.println("minMajesticTrustFlow : " + filterProps.getProperty("minMajesticTrustFlow"));
             builder.append("&fmseotf=" + filterProps.getProperty("minMajesticTrustFlow"));
         }
         if(!filterProps.getProperty("minMajesticTrustRatio").isEmpty()) {
+            System.out.println("minMajesticTrustRatio : " + filterProps.getProperty("minMajesticTrustRatio"));
             builder.append("&fmseotr=" + filterProps.getProperty("minMajesticTrustRatio"));
         }
 
@@ -334,7 +342,7 @@ public class ExportService implements Job {
                 int index = 0;
                 out.println("=====================================0=====================================");
                 for (String line : domainList) {
-                    out.print(line);
+                    out.println(line);
                     index++;
                     if (index % 400 == 0) {
                         out.println("=====================================" + index + "=====================================");

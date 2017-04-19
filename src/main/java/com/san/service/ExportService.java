@@ -263,16 +263,6 @@ public class ExportService implements Job {
         HtmlPage pageWithFilter = webClient.getPage(requestSettings);
 
         HtmlNumberInput test = (HtmlNumberInput) pageWithFilter.getElementById("fmseotr");
-        System.out.println(test);
-
-        String stringSelect = pageWithFilter.getElementById("content")
-                .getFirstElementChild()
-                .getFirstElementChild()
-                .getNextElementSibling()
-                .getFirstElementChild()
-                .getNextElementSibling()
-                .getFirstElementChild().getTextContent();
-        System.out.println(stringSelect);
 
         HtmlTable tableContent = (HtmlTable) pageWithFilter.getElementById("content")
                 .getFirstElementChild()

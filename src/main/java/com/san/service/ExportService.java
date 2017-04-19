@@ -2,7 +2,6 @@ package com.san.service;
 
 import com.gargoylesoftware.htmlunit.*;
 import com.gargoylesoftware.htmlunit.html.*;
-import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -16,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -32,6 +32,53 @@ public class ExportService implements Job {
     private Properties properties;
     private String sourceFilter;
     private String resultLocation;
+
+    private String formRequestString = "fdomainstart=" +
+            "&fdomain=" +
+            "&fdomainend=" +
+            "&fdomainnotstart=" +
+            "&fdomainnot=" +
+            "&fdomainnotend=" +
+            "&fdomainand=" +
+            "&fcharwhite=" +
+            "&fcharblack=" +
+            "&fpattern=" +
+            "&fpatternnot=" +
+            "&fminhost=" +
+            "&fmaxhost=" +
+            "&fminhyphen=" +
+            "&fmaxhyphen=" +
+            "&fminvowelcount=" +
+            "&fmaxvowelcount=" +
+            "&fminconsonantcount=" +
+            "&fmaxconsonantcount=" +
+            "&fmincharcount=" +
+            "&fmaxcharcount=" +
+            "&fminnumbercount=" +
+            "&fmaxnumbercount=" +
+            "&fbl=" +
+            "&fblm=" +
+            "&facr=" +
+            "&facrm=" +
+            "&falexamin=" +
+            "&falexamax=" +
+            "&fwhoisagemax=0" +
+            "&fwhoisage=0" +
+            "&fabirth_yearmax=0" +
+            "&fabirth_year=0" +
+            "&fsimweb=" +
+            "&fsimwebm=" +
+            "&fsimwebc=" +
+            "&fsimwebcm=" +
+            "&fsimwebtcr=" +
+            "&fsimwebtcrm=" +
+            "&fsimwebtcs=" +
+            "&fsimwebtcsm=" +
+            "&flast12=1" +
+            "&fadddate=0" +
+            "&fenddate=0" +
+            "&fendname=0" +
+            "&fenddays=&fenddaysmax=&fprice=0&fprovidertype=0&fpricefrom=&fpriceto=&fregistrar=&flimit=25&fwordcountmin=&fwordcountmax=&fgeo_country=0&fminstatustldava=&fmaxstatustldava=&fminstatustldreg=&fmaxstatustldreg=&frdcnobi=&frdcnobimax=&frdcnobis=&frdcnobismax=&frdcnobie=&frdcnobiemax=&frdcno=&frdcnomax=&frdcnos=&frdcnosmax=&frdcnoe=&frdcnoemax=&frdcom=&frdcommax=&frdcoms=&frdcomsmax=&frdcome=&frdcomemax=&fsg=&fsgmax=&fco=&fcomax=&fcpcfrom=&fcpcto=&fsd=&fsdmax=&fcode=&fcomaxde=&fcpcdfrom=&fcpcdto=&fadwordscategory=0&fsus=&fsusmax=&fcous=&fcomaxus=&fcpcusfrom=&fcpcusto=&fsuk=&fsukmax=&fcouk=&fcomaxuk=&fcpcukfrom=&fcpcukto=&fyandextci=&fyandextcimax=&fwikilinks=&fwikilinksmax=&fmajesticippop=&fmajesticippopmax=&fmajesticclasscpop=&fmajesticclasscpopmax=&fmgrmin=&fmgrmax=&fdomainpop=&fdomainpopmax=&flinkpop=&flinkpopmax=&fippop=&fippopmax=&fclasscpop=&fclasscpopmax=&fsrusrmin=&fsrusrmax=&fsruskmin=&fsruskmax=&fsrustmin=&fsrustmax=&fsruscmin=&fsruscmax=&fmseocf=10&fmseocfmax=&fmseotf=10&fmseotfmax=&fmseoextbl=10&fmseoextblmax=10000&fmseorefdomains=10&fmseorefdomainsmax=&fmseorefips=10&fmseorefipsmax=&fmseorefsubnets=10&fmseorefsubnetsmax=&fmseoindexedurls=&fmseoindexedurlsmax=&fmseotr=10&fmseotrmax=&fmseorefdomainsedu=&fmseorefdomainsedumax=&fmseoextbacklinksedu=&fmseoextbacklinksedumax=&fmseorefdomainsgov=&fmseorefdomainsgovmax=&fmseoextbacklinksgov=&fmseoextbacklinksgovmax=&fmseorefdomainsedue=&fmseorefdomainseduemax=&fmseoextbacklinksedue=&fmseoextbacklinkseduemax=&fmseorefdomainsgove=&fmseorefdomainsgovemax=&fmseoextbacklinksgove=&fmseoextbacklinksgovemax=&q=&fsa=&savedsearch_id=&activetab=&button_submit=Apply+Filter";
 
     public ExportService() {
 
@@ -118,7 +165,8 @@ public class ExportService implements Job {
 
     private String createFilter() {
         StringBuilder builder = new StringBuilder();
-        builder.append("https://member.expireddomains.net/export/expiredcom/?export=textfile&flast12=1");
+        //builder.append("https://member.expireddomains.net/export/expiredcom/?export=textfile");
+        builder.append("&flast12=1");
         if (!filterProps.getProperty("minExBackLink").isEmpty()) {
             System.out.println("minExBackLink : " + filterProps.getProperty("minExBackLink"));
             builder.append("&fmseoextbl=" + filterProps.getProperty("minExBackLink"));
@@ -254,8 +302,8 @@ public class ExportService implements Job {
 
     public boolean checkDomainNumber(WebClient webClient) throws IOException, InterruptedException {
 
-        HtmlPage page = webClient.getPage("https://member.expireddomains.net/domains/expiredcom/");
-        HtmlForm filterForm = page.getForms().get(1);
+        //HtmlPage page = webClient.getPage("https://member.expireddomains.net/domains/expiredcom/");
+       /* HtmlForm filterForm = page.getForms().get(1);
 
         HtmlCheckBoxInput last12Hour = (HtmlCheckBoxInput) page.getElementById("flast12");
         last12Hour.setChecked(true);
@@ -284,15 +332,18 @@ public class ExportService implements Job {
         HtmlNumberInput minMajesticTrustRatio = (HtmlNumberInput) page.getElementById("fmseotr");
         minMajesticTrustRatio.setValueAttribute(filterProps.getProperty("minMajesticTrustRatio"));
 
-        /*submit*/
+        *//*submit*//*
 
         HtmlInput button = filterForm.getInputByValue("Apply Filter");
 
         webClient.waitForBackgroundJavaScriptStartingBefore(3000);
-        HtmlPage pageWithFilter = button.click();
-        synchronized (pageWithFilter) {
-            pageWithFilter.wait(10000);
-        }
+        HtmlPage pageWithFilter = button.click();*/
+        URL url = new URL("https://member.expireddomains.net/domains/expiredcom/");
+        WebRequest requestSettings = new WebRequest(url, HttpMethod.POST);
+
+        requestSettings.setRequestBody(createFilter());
+
+        HtmlPage pageWithFilter = webClient.getPage(requestSettings);
 
         HtmlNumberInput test = (HtmlNumberInput) pageWithFilter.getElementById("fmseotr");
         System.out.println(test);

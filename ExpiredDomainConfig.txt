@@ -5,4 +5,4 @@ minMajesticRefIP=10
 minMajesticClassC=10
 minMajesticCitationFlow=10
 minMajesticTrustFlow=10
-minMajesticTrustRatio=0
+minMajesticTrustRatio=10

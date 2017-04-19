@@ -5,7 +5,7 @@ import com.gargoylesoftware.htmlunit.CookieManager;
 import com.gargoylesoftware.htmlunit.Page;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebResponse;
-import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
+import com.gargoylesoftware.htmlunit.html.DomElement;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
@@ -30,12 +30,10 @@ import java.io.PrintWriter;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * Created by nguye on 4/15/2017.
@@ -79,7 +77,7 @@ public class ExportService implements Job {
         int min = utc.getMinute();
 
         while (!sleep) {
-
+            System.out.println("Hour " + hour);
             if (!validateTime(hour, min)) {
                 System.out.println("CURRENT TIME IS OUT OF RANGE, WAIT FOR NEXT TURN");
                 sleep = true;
@@ -87,10 +85,17 @@ public class ExportService implements Job {
                 try {
                     System.out.println("LOGIN....");
                     webClient = login();
-                    System.out.println("APPLY FILTER....");
-                    String url = createFilter();
-                    System.out.println("EXPORT DATA....");
-                    List<String> domainList = exportDataFromPageResultByLink(webClient, url);
+
+                    /*APPLY Filter to check the number of result*/
+                    boolean downloadAble = checkDomainNumber(webClient);
+                    List<String> domainList = Collections.emptyList();
+
+                   /* if(downloadAble) {
+                        System.out.println("APPLY FILTER....");
+                        String url = createFilter();
+                        System.out.println("EXPORT DATA....");
+                        domainList = exportDataFromPageResultByLink(webClient, url);
+                    }
                     System.out.println("THERE ARE " + domainList.size() + " DOMAINS");
                     if (domainList.size() > 0) {
                         System.out.println("START STORE DOMAIN LIST IN THE FILE");
@@ -98,10 +103,10 @@ public class ExportService implements Job {
                         System.out.println("FINISHED - SLEEP until next run");
                         sleep = true;
                     } else {
-                        /*If there is no new domain, sleep for 1 minute and repeat*/
+                        *//*If there is no new domain, sleep for 1 minute and repeat*//*
                         System.out.println("SLEEP FOR 1 MINUTE...");
                         sleep(60 * 1000);
-                    }
+                    }*/
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -198,16 +203,6 @@ public class ExportService implements Job {
 
     }
 
-    public Set<String> exportDataFromPageResult(HtmlPage page) throws IOException {
-        HtmlAnchor downloadLink = page.getAnchorByHref("/export/expiredcom/?export=textfile");
-        System.out.println(downloadLink);
-
-        String is = downloadLink.click().getWebResponse().getContentAsString();
-
-        String[] result = is.split("\n");
-
-        return new HashSet<String>(Arrays.asList(result));
-    }
 
     private void loadFilter(String sourceFilter) {
         filterProps = new Properties();
@@ -218,7 +213,7 @@ public class ExportService implements Job {
         } catch (FileNotFoundException e) {
             System.out.println("ERROR : Filter config file is not found");
         } catch (IOException e) {
-            System.out.println("ERROR : Cannot load filter from file");
+            System.out.println("ERROR : Cannot load checkDomainNumber from file");
         } finally {
             if (is != null) {
                 try {
@@ -258,7 +253,7 @@ public class ExportService implements Job {
         return webClient;
     }
 
-    public HtmlPage filter(WebClient webClient) throws IOException {
+    public boolean checkDomainNumber(WebClient webClient) throws IOException {
         HtmlPage page = webClient.getPage("https://member.expireddomains.net/domains/expiredcom/");
         HtmlForm filterForm = page.getForms().get(1);
 
@@ -293,7 +288,19 @@ public class ExportService implements Job {
 
         HtmlInput button = filterForm.getInputByValue("Apply Filter");
 
-        return button.click();
+        HtmlPage pageWithFilter = button.click();
+
+        DomElement tableContent = pageWithFilter.getElementById("content");
+        String resultInformation = tableContent
+                .getFirstElementChild()
+                .getFirstElementChild()
+                .getNextElementSibling()
+                .getFirstElementChild().getTextContent().trim();
+        String [] result = resultInformation.split("About");
+        for(String s : result) {
+            System.out.println(s);
+        }
+        return false;
     }
 
     private boolean validateTime(int hour, int min) {

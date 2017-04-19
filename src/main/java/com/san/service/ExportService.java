@@ -28,57 +28,11 @@ import java.util.Properties;
  * Created by An Nguyen on 4/15/2017.
  */
 public class ExportService implements Job {
+    private static final String DOWNLOAD_URL = "https://member.expireddomains.net/export/expiredcom/?export=textfile&";
     private Properties filterProps;
     private Properties properties;
     private String sourceFilter;
     private String resultLocation;
-
-    private String formRequestString = "fdomainstart=" +
-            "&fdomain=" +
-            "&fdomainend=" +
-            "&fdomainnotstart=" +
-            "&fdomainnot=" +
-            "&fdomainnotend=" +
-            "&fdomainand=" +
-            "&fcharwhite=" +
-            "&fcharblack=" +
-            "&fpattern=" +
-            "&fpatternnot=" +
-            "&fminhost=" +
-            "&fmaxhost=" +
-            "&fminhyphen=" +
-            "&fmaxhyphen=" +
-            "&fminvowelcount=" +
-            "&fmaxvowelcount=" +
-            "&fminconsonantcount=" +
-            "&fmaxconsonantcount=" +
-            "&fmincharcount=" +
-            "&fmaxcharcount=" +
-            "&fminnumbercount=" +
-            "&fmaxnumbercount=" +
-            "&fbl=" +
-            "&fblm=" +
-            "&facr=" +
-            "&facrm=" +
-            "&falexamin=" +
-            "&falexamax=" +
-            "&fwhoisagemax=0" +
-            "&fwhoisage=0" +
-            "&fabirth_yearmax=0" +
-            "&fabirth_year=0" +
-            "&fsimweb=" +
-            "&fsimwebm=" +
-            "&fsimwebc=" +
-            "&fsimwebcm=" +
-            "&fsimwebtcr=" +
-            "&fsimwebtcrm=" +
-            "&fsimwebtcs=" +
-            "&fsimwebtcsm=" +
-            "&flast12=1" +
-            "&fadddate=0" +
-            "&fenddate=0" +
-            "&fendname=0" +
-            "&fenddays=&fenddaysmax=&fprice=0&fprovidertype=0&fpricefrom=&fpriceto=&fregistrar=&flimit=25&fwordcountmin=&fwordcountmax=&fgeo_country=0&fminstatustldava=&fmaxstatustldava=&fminstatustldreg=&fmaxstatustldreg=&frdcnobi=&frdcnobimax=&frdcnobis=&frdcnobismax=&frdcnobie=&frdcnobiemax=&frdcno=&frdcnomax=&frdcnos=&frdcnosmax=&frdcnoe=&frdcnoemax=&frdcom=&frdcommax=&frdcoms=&frdcomsmax=&frdcome=&frdcomemax=&fsg=&fsgmax=&fco=&fcomax=&fcpcfrom=&fcpcto=&fsd=&fsdmax=&fcode=&fcomaxde=&fcpcdfrom=&fcpcdto=&fadwordscategory=0&fsus=&fsusmax=&fcous=&fcomaxus=&fcpcusfrom=&fcpcusto=&fsuk=&fsukmax=&fcouk=&fcomaxuk=&fcpcukfrom=&fcpcukto=&fyandextci=&fyandextcimax=&fwikilinks=&fwikilinksmax=&fmajesticippop=&fmajesticippopmax=&fmajesticclasscpop=&fmajesticclasscpopmax=&fmgrmin=&fmgrmax=&fdomainpop=&fdomainpopmax=&flinkpop=&flinkpopmax=&fippop=&fippopmax=&fclasscpop=&fclasscpopmax=&fsrusrmin=&fsrusrmax=&fsruskmin=&fsruskmax=&fsrustmin=&fsrustmax=&fsruscmin=&fsruscmax=&fmseocf=10&fmseocfmax=&fmseotf=10&fmseotfmax=&fmseoextbl=10&fmseoextblmax=10000&fmseorefdomains=10&fmseorefdomainsmax=&fmseorefips=10&fmseorefipsmax=&fmseorefsubnets=10&fmseorefsubnetsmax=&fmseoindexedurls=&fmseoindexedurlsmax=&fmseotr=10&fmseotrmax=&fmseorefdomainsedu=&fmseorefdomainsedumax=&fmseoextbacklinksedu=&fmseoextbacklinksedumax=&fmseorefdomainsgov=&fmseorefdomainsgovmax=&fmseoextbacklinksgov=&fmseoextbacklinksgovmax=&fmseorefdomainsedue=&fmseorefdomainseduemax=&fmseoextbacklinksedue=&fmseoextbacklinkseduemax=&fmseorefdomainsgove=&fmseorefdomainsgovemax=&fmseoextbacklinksgove=&fmseoextbacklinksgovemax=&q=&fsa=&savedsearch_id=&activetab=&button_submit=Apply+Filter";
 
     public ExportService() {
 
@@ -135,9 +89,9 @@ public class ExportService implements Job {
                     boolean downloadAble = checkDomainNumber(webClient);
                     List<String> domainList = Collections.emptyList();
 
-                   /* if(downloadAble) {
+                    if(downloadAble) {
                         System.out.println("APPLY FILTER....");
-                        String url = createFilter();
+                        String url = DOWNLOAD_URL + createFilter();
                         System.out.println("EXPORT DATA....");
                         domainList = exportDataFromPageResultByLink(webClient, url);
                     }
@@ -148,10 +102,10 @@ public class ExportService implements Job {
                         System.out.println("FINISHED - SLEEP until next run");
                         sleep = true;
                     } else {
-                        *//*If there is no new domain, sleep for 1 minute and repeat*//*
+                        //If there is no new domain, sleep for 1 minute and repeat
                         System.out.println("SLEEP FOR 1 MINUTE...");
                         sleep(60 * 1000);
-                    }*/
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (InterruptedException e) {
@@ -166,7 +120,7 @@ public class ExportService implements Job {
     private String createFilter() {
         StringBuilder builder = new StringBuilder();
         //builder.append("https://member.expireddomains.net/export/expiredcom/?export=textfile");
-        builder.append("&flast12=1");
+        builder.append("flast12=1");
         if (!filterProps.getProperty("minExBackLink").isEmpty()) {
             System.out.println("minExBackLink : " + filterProps.getProperty("minExBackLink"));
             builder.append("&fmseoextbl=" + filterProps.getProperty("minExBackLink"));
@@ -301,43 +255,6 @@ public class ExportService implements Job {
     }
 
     public boolean checkDomainNumber(WebClient webClient) throws IOException, InterruptedException {
-
-        //HtmlPage page = webClient.getPage("https://member.expireddomains.net/domains/expiredcom/");
-       /* HtmlForm filterForm = page.getForms().get(1);
-
-        HtmlCheckBoxInput last12Hour = (HtmlCheckBoxInput) page.getElementById("flast12");
-        last12Hour.setChecked(true);
-
-        HtmlNumberInput minExBackLink = (HtmlNumberInput) page.getElementById("fmseoextbl");
-        minExBackLink.setValueAttribute(filterProps.getProperty("minExBackLink"));
-
-        HtmlNumberInput maxExBackLink = (HtmlNumberInput) page.getElementById("fmseoextblmax");
-        maxExBackLink.setValueAttribute(filterProps.getProperty("maxExBackLink"));
-
-        HtmlNumberInput minMajesticRefDomain = (HtmlNumberInput) page.getElementById("fmseorefdomains");
-        minMajesticRefDomain.setValueAttribute(filterProps.getProperty("minMajesticRefDomain"));
-
-        HtmlNumberInput minMajesticRefIP = (HtmlNumberInput) page.getElementById("fmseorefips");
-        minMajesticRefIP.setValueAttribute(filterProps.getProperty("minMajesticRefIP"));
-
-        HtmlNumberInput minMajesticClassC = (HtmlNumberInput) page.getElementById("fmseorefsubnets");
-        minMajesticClassC.setValueAttribute(filterProps.getProperty("minMajesticClassC"));
-
-        HtmlNumberInput minMajesticCitationFlow = (HtmlNumberInput) page.getElementById("fmseocf");
-        minMajesticCitationFlow.setValueAttribute(filterProps.getProperty("minMajesticCitationFlow"));
-
-        HtmlNumberInput minMajesticTrustFlow = (HtmlNumberInput) page.getElementById("fmseotf");
-        minMajesticTrustFlow.setValueAttribute(filterProps.getProperty("minMajesticTrustFlow"));
-
-        HtmlNumberInput minMajesticTrustRatio = (HtmlNumberInput) page.getElementById("fmseotr");
-        minMajesticTrustRatio.setValueAttribute(filterProps.getProperty("minMajesticTrustRatio"));
-
-        *//*submit*//*
-
-        HtmlInput button = filterForm.getInputByValue("Apply Filter");
-
-        webClient.waitForBackgroundJavaScriptStartingBefore(3000);
-        HtmlPage pageWithFilter = button.click();*/
         URL url = new URL("https://member.expireddomains.net/domains/expiredcom/");
         WebRequest requestSettings = new WebRequest(url, HttpMethod.POST);
 
@@ -375,8 +292,12 @@ public class ExportService implements Job {
                 return false;
             } else {
                 HtmlTableRow row = body.getRows().get(0);
-                HtmlTableCell cell = row.getCell(1);
-                System.out.println(cell.getTextContent());
+                String rowContext = row.getTextContent();
+                if(rowContext.contains("no Domains found")) {
+                    return false;
+                } else {
+                    return true;
+                }
             }
 
         }

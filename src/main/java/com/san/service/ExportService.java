@@ -1,19 +1,8 @@
 package com.san.service;
 
-import com.gargoylesoftware.htmlunit.BrowserVersion;
-import com.gargoylesoftware.htmlunit.CookieManager;
-import com.gargoylesoftware.htmlunit.Page;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.WebResponse;
-import com.gargoylesoftware.htmlunit.html.DomElement;
-import com.gargoylesoftware.htmlunit.html.HtmlButton;
-import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlInput;
-import com.gargoylesoftware.htmlunit.html.HtmlNumberInput;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlPasswordInput;
-import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
+import com.gargoylesoftware.htmlunit.*;
+import com.gargoylesoftware.htmlunit.html.*;
+import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptJobManager;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -36,7 +25,7 @@ import java.util.List;
 import java.util.Properties;
 
 /**
- * Created by nguye on 4/15/2017.
+ * Created by An Nguyen on 4/15/2017.
  */
 public class ExportService implements Job {
     private Properties filterProps;
@@ -70,11 +59,18 @@ public class ExportService implements Job {
     }
 
     public void run() {
-        WebClient webClient;
+        WebClient webClient = new WebClient(BrowserVersion.CHROME);
+        webClient.getOptions().setThrowExceptionOnScriptError(false);
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+        webClient.getOptions().setJavaScriptEnabled(true);
+        webClient.getOptions().setCssEnabled(true);
+
         boolean sleep = false;
         ZonedDateTime utc = ZonedDateTime.now(ZoneOffset.UTC);
         int hour = utc.getHour();
         int min = utc.getMinute();
+        boolean isLogin = false;
 
         while (!sleep) {
             System.out.println("Hour " + hour);
@@ -83,8 +79,10 @@ public class ExportService implements Job {
                 sleep = true;
             } else {
                 try {
-                    System.out.println("LOGIN....");
-                    webClient = login();
+                    if(!isLogin) {
+                        System.out.println("LOGIN....");
+                        isLogin = login(webClient);
+                    }
 
                     /*APPLY Filter to check the number of result*/
                     boolean downloadAble = checkDomainNumber(webClient);
@@ -109,43 +107,47 @@ public class ExportService implements Job {
                     }*/
                 } catch (IOException e) {
                     e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }
+
+        webClient.close();
     }
 
     private String createFilter() {
         StringBuilder builder = new StringBuilder();
         builder.append("https://member.expireddomains.net/export/expiredcom/?export=textfile&flast12=1");
-        if(!filterProps.getProperty("minExBackLink").isEmpty()) {
+        if (!filterProps.getProperty("minExBackLink").isEmpty()) {
             System.out.println("minExBackLink : " + filterProps.getProperty("minExBackLink"));
             builder.append("&fmseoextbl=" + filterProps.getProperty("minExBackLink"));
         }
-        if(!filterProps.getProperty("maxExBackLink").isEmpty()) {
+        if (!filterProps.getProperty("maxExBackLink").isEmpty()) {
             System.out.println("maxExBackLink : " + filterProps.getProperty("maxExBackLink"));
             builder.append("&fmseoextblmax=" + filterProps.getProperty("maxExBackLink"));
         }
-        if(!filterProps.getProperty("minMajesticRefDomain").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticRefDomain").isEmpty()) {
             System.out.println("minMajesticRefDomain : " + filterProps.getProperty("minMajesticRefDomain"));
             builder.append("&fmseorefdomains=" + filterProps.getProperty("minMajesticRefDomain"));
         }
-        if(!filterProps.getProperty("minMajesticRefIP").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticRefIP").isEmpty()) {
             System.out.println("minMajesticRefIP : " + filterProps.getProperty("minMajesticRefIP"));
             builder.append("&fmseorefips=" + filterProps.getProperty("minMajesticRefIP"));
         }
-        if(!filterProps.getProperty("minMajesticClassC").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticClassC").isEmpty()) {
             System.out.println("minMajesticClassC : " + filterProps.getProperty("minMajesticClassC"));
             builder.append("&fmseorefsubnets=" + filterProps.getProperty("minMajesticClassC"));
         }
-        if(!filterProps.getProperty("minMajesticCitationFlow").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticCitationFlow").isEmpty()) {
             System.out.println("minMajesticCitationFlow : " + filterProps.getProperty("minMajesticCitationFlow"));
             builder.append("&fmseocf=" + filterProps.getProperty("minMajesticCitationFlow"));
         }
-        if(!filterProps.getProperty("minMajesticTrustFlow").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticTrustFlow").isEmpty()) {
             System.out.println("minMajesticTrustFlow : " + filterProps.getProperty("minMajesticTrustFlow"));
             builder.append("&fmseotf=" + filterProps.getProperty("minMajesticTrustFlow"));
         }
-        if(!filterProps.getProperty("minMajesticTrustRatio").isEmpty()) {
+        if (!filterProps.getProperty("minMajesticTrustRatio").isEmpty()) {
             System.out.println("minMajesticTrustRatio : " + filterProps.getProperty("minMajesticTrustRatio"));
             builder.append("&fmseotr=" + filterProps.getProperty("minMajesticTrustRatio"));
         }
@@ -182,7 +184,7 @@ public class ExportService implements Job {
 
             br = new BufferedReader(new InputStreamReader(is));
             while ((line = br.readLine()) != null) {
-                if(line.length()>2) { //make sure it's a domain
+                if (line.length() > 2) { //make sure it's a domain
                     domainList.add(line);
                 }
             }
@@ -224,12 +226,9 @@ public class ExportService implements Job {
         }
     }
 
-    public WebClient login() throws IOException {
-        WebClient webClient = new WebClient(BrowserVersion.INTERNET_EXPLORER);
-        webClient.getOptions().setThrowExceptionOnScriptError(false);
-        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
-        CookieManager cookieMan = new CookieManager();
-        cookieMan = webClient.getCookieManager();
+    public boolean login(final WebClient webClient) throws IOException {
+
+        CookieManager cookieMan = webClient.getCookieManager();
         cookieMan.setCookiesEnabled(true);
 
         HtmlPage page = webClient.getPage("https://www.expireddomains.net/login/");
@@ -250,10 +249,11 @@ public class ExportService implements Job {
 
         button.click();
 
-        return webClient;
+        return true;
     }
 
-    public boolean checkDomainNumber(WebClient webClient) throws IOException {
+    public boolean checkDomainNumber(WebClient webClient) throws IOException, InterruptedException {
+
         HtmlPage page = webClient.getPage("https://member.expireddomains.net/domains/expiredcom/");
         HtmlForm filterForm = page.getForms().get(1);
 
@@ -261,45 +261,75 @@ public class ExportService implements Job {
         last12Hour.setChecked(true);
 
         HtmlNumberInput minExBackLink = (HtmlNumberInput) page.getElementById("fmseoextbl");
-        minExBackLink.setText(filterProps.getProperty("minExBackLink"));
+        minExBackLink.setValueAttribute(filterProps.getProperty("minExBackLink"));
 
         HtmlNumberInput maxExBackLink = (HtmlNumberInput) page.getElementById("fmseoextblmax");
-        maxExBackLink.setText(filterProps.getProperty("maxExBackLink"));
+        maxExBackLink.setValueAttribute(filterProps.getProperty("maxExBackLink"));
 
         HtmlNumberInput minMajesticRefDomain = (HtmlNumberInput) page.getElementById("fmseorefdomains");
-        minMajesticRefDomain.setText(filterProps.getProperty("minMajesticRefDomain"));
+        minMajesticRefDomain.setValueAttribute(filterProps.getProperty("minMajesticRefDomain"));
 
         HtmlNumberInput minMajesticRefIP = (HtmlNumberInput) page.getElementById("fmseorefips");
-        minMajesticRefIP.setText(filterProps.getProperty("minMajesticRefIP"));
+        minMajesticRefIP.setValueAttribute(filterProps.getProperty("minMajesticRefIP"));
 
         HtmlNumberInput minMajesticClassC = (HtmlNumberInput) page.getElementById("fmseorefsubnets");
-        minMajesticClassC.setText(filterProps.getProperty("minMajesticClassC"));
+        minMajesticClassC.setValueAttribute(filterProps.getProperty("minMajesticClassC"));
 
         HtmlNumberInput minMajesticCitationFlow = (HtmlNumberInput) page.getElementById("fmseocf");
-        minMajesticCitationFlow.setText(filterProps.getProperty("minMajesticCitationFlow"));
+        minMajesticCitationFlow.setValueAttribute(filterProps.getProperty("minMajesticCitationFlow"));
 
         HtmlNumberInput minMajesticTrustFlow = (HtmlNumberInput) page.getElementById("fmseotf");
-        minMajesticTrustFlow.setText(filterProps.getProperty("minMajesticTrustFlow"));
+        minMajesticTrustFlow.setValueAttribute(filterProps.getProperty("minMajesticTrustFlow"));
 
         HtmlNumberInput minMajesticTrustRatio = (HtmlNumberInput) page.getElementById("fmseotr");
-        minMajesticTrustRatio.setText(filterProps.getProperty("minMajesticTrustRatio"));
+        minMajesticTrustRatio.setValueAttribute(filterProps.getProperty("minMajesticTrustRatio"));
 
         /*submit*/
 
         HtmlInput button = filterForm.getInputByValue("Apply Filter");
 
+        webClient.waitForBackgroundJavaScriptStartingBefore(3000);
         HtmlPage pageWithFilter = button.click();
+        synchronized (pageWithFilter) {
+            pageWithFilter.wait(10000);
+        }
 
-        DomElement tableContent = pageWithFilter.getElementById("content");
-        String resultInformation = tableContent
+        HtmlNumberInput test = (HtmlNumberInput) pageWithFilter.getElementById("fmseotr");
+        System.out.println(test);
+
+        String stringSelect = pageWithFilter.getElementById("content")
                 .getFirstElementChild()
                 .getFirstElementChild()
                 .getNextElementSibling()
-                .getFirstElementChild().getTextContent().trim();
-        String [] result = resultInformation.split("About");
-        for(String s : result) {
-            System.out.println(s);
+                .getFirstElementChild()
+                .getNextElementSibling()
+                .getFirstElementChild().getTextContent();
+        System.out.println(stringSelect);
+
+        HtmlTable tableContent = (HtmlTable) pageWithFilter.getElementById("content")
+                .getFirstElementChild()
+                .getFirstElementChild()
+                .getNextElementSibling()
+                .getFirstElementChild()
+                .getNextElementSibling()
+                .getNextElementSibling();
+        if (tableContent != null) {
+            HtmlTableBody body = tableContent.getBodies().get(0);
+
+            int rowNum = body.getRows().size();
+            System.out.println("Row num is " + rowNum);
+            if (rowNum > 1) {
+                return true;
+            } else if(rowNum <=0 ) {
+                return false;
+            } else {
+                HtmlTableRow row = body.getRows().get(0);
+                HtmlTableCell cell = row.getCell(1);
+                System.out.println(cell.getTextContent());
+            }
+
         }
+
         return false;
     }
 
@@ -349,7 +379,7 @@ public class ExportService implements Job {
                 int index = 0;
                 out.println("=====================================0=====================================");
                 for (String line : domainList) {
-                    out.println(line);
+                    out.println("www." + line);
                     index++;
                     if (index % 400 == 0) {
                         out.println("=====================================" + index + "=====================================");

@@ -17,7 +17,7 @@ import java.util.Properties;
 import java.util.TimeZone;
 
 /**
- * Created by nguye on 4/15/2017.
+ * Created by An Nguyen on 4/15/2017.
  */
 public class Main {
     public static void main(String[] args) throws Exception {
